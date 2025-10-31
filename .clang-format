@@ -1,0 +1,23 @@
+# 大括号换行
+BraceWrapping:
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+BreakBeforeBraces: Custom
+
+# 每行字符的限制，0表示没有限制
+ColumnLimit: 0
+# 连续空行的最大数量
+MaxEmptyLinesToKeep: 8
+
+# 允许重新排版注释
+ReflowComments: false
+# 允许排序#include
+SortIncludes: false
+
+# 在C风格类型转换后添加空格
+SpaceAfterCStyleCast: true
