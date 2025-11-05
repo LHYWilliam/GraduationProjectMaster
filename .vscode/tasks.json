@@ -6,12 +6,12 @@
         {
             "label": "Build",
             "type": "shell",
-            "command": "cube-cmake --build /home/william/Code/Embedded/GraduationProjectSlave/build/Debug --"
+            "command": "cube-cmake --build /home/william/Code/Embedded/GraduationProjectMaster/build/Debug --"
         },
         {
             "label": "Flash",
             "type": "shell",
-            "command": "probe-rs run --chip STM32F103CB ./build/Debug/GraduationProjectSlave.elf --preverify --verify"
+            "command": "probe-rs run --chip STM32F407VE ./build/Debug/GraduationProjectMaster.elf --preverify --verify"
         },
         {
             "label": "Build + Flash",

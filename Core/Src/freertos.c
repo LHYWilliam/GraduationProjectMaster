@@ -26,6 +26,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include "LCD.h"
+#include "dma.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,6 +48,10 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
+
+LCD_t LCD = {
+    .hDMAx = &hdma_memtomem_dma2_stream0,
+};
 
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
@@ -114,8 +121,23 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
+
+  LCD_Init(&LCD);
+  LCD_Clear(&LCD, WHITE);
+
+  extern const unsigned char asc2_1206[95][12];
+  LCD_ShowImage(&LCD, 128, 128, 64, 64, &asc2_1206[0][0]);
+
+  LCD_Printf(&LCD, 64, 64, 128, 12, 12, "Hello");
+  LCD_Fill(&LCD, 16, 16, 32, 32, RED);
+  LCD_DrawLine(&LCD, 0, 0, 32, 32);
+  LCD_DrawRectangle(&LCD, 32, 32, 64, 64);
+  LCD_DrawCircle(&LCD, 48, 48, 16);
+
+
+
   /* Infinite loop */
-  for(;;)
+  for (;;)
   {
     osDelay(1);
   }
