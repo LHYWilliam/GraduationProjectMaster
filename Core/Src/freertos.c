@@ -26,12 +26,11 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
-#include "dma.h"
-#include "gpio.h"
-
 #include "lvgl.h"
+#include "lv_port_disp.h"
+#include "demos/widgets/lv_demo_widgets.h"
 
-#include "LCD.h"
+#include "Application.h"
 
 /* USER CODE END Includes */
 
@@ -43,8 +42,6 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-void flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map);
-
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -55,21 +52,12 @@ void flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map);
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 
-LCD_t LCD = {
-    .RST_Port = LCD_RST_GPIO_Port,
-    .RST_Pin = LCD_RST_Pin,
-    .BLK_Port = LCD_BLK_GPIO_Port,
-    .BLK_Pin = LCD_BLK_Pin,
-    .hDMAx = &hdma_memtomem_dma2_stream0,
-    .Rotation = Rotation0,
-};
-
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 128 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 
@@ -137,20 +125,31 @@ void StartDefaultTask(void *argument)
   LCD_Clear(&LCD);
 
   lv_init();
+  lv_port_disp_init();
 
-  lv_tick_set_cb(osKernelGetTickCount);
+  lv_demo_widgets();
 
-  lv_display_t *display = lv_display_create(LCD.Width, LCD.Height);
+  // static lv_style_t style;
+  // lv_style_init(&style);
+  // lv_style_set_radius(&style, 5);
 
-  static uint8_t buf1[480 * 320 / 10];
-  static uint8_t buf2[480 * 320 / 10];
-  lv_display_set_buffers(display, buf1, buf2, sizeof(buf1), LV_DISPLAY_RENDER_MODE_PARTIAL);
+  // /*Make a gradient*/
+  // lv_style_set_width(&style, 150);
+  // lv_style_set_height(&style, LV_SIZE_CONTENT);
 
-  lv_display_set_flush_cb(display, flush_cb);
+  // lv_style_set_pad_ver(&style, 20);
+  // lv_style_set_pad_left(&style, 5);
 
-  lv_obj_t *label = lv_label_create(lv_screen_active());
-  lv_label_set_text(label, "Hello world");
-  lv_obj_center(label);
+  // lv_style_set_x(&style, lv_pct(50));
+  // lv_style_set_y(&style, 80);
+
+  // /*Create an object with the new style*/
+  // lv_obj_t *obj = lv_obj_create(lv_scr_act());
+  // lv_obj_add_style(obj, &style, 0);
+
+  // lv_obj_t *label = lv_label_create(obj);
+  // lv_label_set_text(label, "Hello");
+
 
   /* Infinite loop */
   for (;;)
@@ -163,14 +162,6 @@ void StartDefaultTask(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-
-void flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
-{
-  /*Write px_map to the area->x1, area->x2, area->y1, area->y2 area of the
-     *frame buffer or external display controller. */
-  LCD_ShowImage(&LCD, area->x1, area->y1, area->x2 - area->x1 + 1, area->y2 - area->y1 + 1, px_map);
-  lv_display_flush_ready(disp);
-}
 
 /* USER CODE END Application */
 

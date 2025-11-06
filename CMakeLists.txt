@@ -45,13 +45,24 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
+    ${CMAKE_SOURCE_DIR}/Application/Application.c
+    ${CMAKE_SOURCE_DIR}/Application/LVGL/lv_port_disp.c
+
     ${CMAKE_SOURCE_DIR}/Hardware/Src/LCD.c
     ${CMAKE_SOURCE_DIR}/Hardware/Src/LCD_Font.c
+
+    ${CMAKE_SOURCE_DIR}/Middlewares/Third_Party/lvgl/demos/widgets/lv_demo_widgets.c
+    ${CMAKE_SOURCE_DIR}/Middlewares/Third_Party/lvgl/demos/widgets/assets/img_clothes.c
+    ${CMAKE_SOURCE_DIR}/Middlewares/Third_Party/lvgl/demos/widgets/assets/img_demo_widgets_avatar.c
+    ${CMAKE_SOURCE_DIR}/Middlewares/Third_Party/lvgl/demos/widgets/assets/img_lvgl_logo.c
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
+    ${CMAKE_SOURCE_DIR}/Application/
+    ${CMAKE_SOURCE_DIR}/Application/LVGL
+
     ${CMAKE_SOURCE_DIR}/Hardware/Inc
 )
 
