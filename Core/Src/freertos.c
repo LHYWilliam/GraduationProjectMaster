@@ -26,8 +26,10 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
-#include "LCD.h"
 #include "dma.h"
+#include "gpio.h"
+
+#include "LCD.h"
 
 /* USER CODE END Includes */
 
@@ -50,16 +52,21 @@
 /* USER CODE BEGIN Variables */
 
 LCD_t LCD = {
+    .RST_Port = LCD_RST_GPIO_Port,
+    .RST_Pin = LCD_RST_Pin,
+    .BLK_Port = LCD_BLK_GPIO_Port,
+    .BLK_Pin = LCD_BLK_Pin,
     .hDMAx = &hdma_memtomem_dma2_stream0,
+    .Rotation = Rotation90,
 };
 
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+    .name = "defaultTask",
+    .stack_size = 128 * 4,
+    .priority = (osPriority_t) osPriorityNormal,
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -76,7 +83,8 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   * @param  None
   * @retval None
   */
-void MX_FREERTOS_Init(void) {
+void MX_FREERTOS_Init(void)
+{
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
@@ -108,7 +116,6 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
-
 }
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -123,15 +130,17 @@ void StartDefaultTask(void *argument)
   /* USER CODE BEGIN StartDefaultTask */
 
   LCD_Init(&LCD);
-  LCD_Clear(&LCD, WHITE);
+  LCD_Clear(&LCD);
 
-  extern const unsigned char asc2_1206[95][12];
-  LCD_ShowImage(&LCD, 128, 128, 64, 64, &asc2_1206[0][0]);
+  extern const uint8_t LCDFont6x12Bitmap[95][12];
+  LCD_ShowImage(&LCD, 128, 128, 64, 64, &LCDFont6x12Bitmap[0][0]);
 
-  LCD_Printf(&LCD, 64, 64, 128, 12, 12, "Hello");
-  LCD_Fill(&LCD, 16, 16, 32, 32, RED);
+  LCD_Printf(&LCD, 64, 64, "Hello");
+  LCD_FillArea(&LCD, 16, 16, 32, 32);
   LCD_DrawLine(&LCD, 0, 0, 32, 32);
-  LCD_DrawRectangle(&LCD, 32, 32, 64, 64);
+  LCD_DrawVLine(&LCD, 32, 64, 128);
+  LCD_DrawHLine(&LCD, 16, 128, 32);
+  LCD_DrawRectangle(&LCD, 32, 128, 3, 3);
   LCD_DrawCircle(&LCD, 48, 48, 16);
 
 
@@ -148,4 +157,3 @@ void StartDefaultTask(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-

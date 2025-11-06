@@ -6,197 +6,285 @@
 #include "LCD.h"
 #include "LCD_Font.h"
 
-#define LCD_WriteREG(Reg) LCD1->LCD_REG = (Reg);
-
-#define LCD_WriteDATA(Ram) LCD1->LCD_RAM = (Ram);
-
-#define LCD_WriteGRAM(lcd) LCD1->LCD_REG = lcd->GRAMCMD;
-
 #define LCD_ReadDATA() LCD1->LCD_RAM
+#define LCD_WriteREG(REG) LCD1->LCD_REG = (REG);
+#define LCD_WriteDATA(RAM) LCD1->LCD_RAM = (RAM);
+#define LCD_WriteGRAM(Self) LCD1->LCD_REG = Self->GRAMCMD;
 
-void LCD_DisplayOn(void) { LCD_WriteREG(0X29); }
+void LCD_ReadID(LCD_t *Self);
+void LCD_ConfigReg(LCD_t *Self);
 
-void LCD_DisplayOff(void) { LCD_WriteREG(0X28); }
-
-void LCD_SetCursor(LCD_t *Self, uint16_t x, uint16_t y)
+void LCD_WriteRST(LCD_t *Self, GPIO_PinState State)
 {
-  LCD_WriteREG(Self->SetXCMD);
-  LCD_WriteDATA(x >> 8);
-  LCD_WriteDATA(x & 0XFF);
-
-  LCD_WriteREG(Self->SetYCMD);
-  LCD_WriteDATA(y >> 8);
-  LCD_WriteDATA(y & 0XFF);
+  HAL_GPIO_WritePin(Self->RST_Port, Self->RST_Pin, State);
 }
 
-void LCD_SetWindow(LCD_t *Self, uint16_t x1, uint16_t y1, uint16_t Width, uint16_t Height)
+void LCD_WriteBLK(LCD_t *Self, GPIO_PinState State)
 {
-  uint16_t x2 = x1 + Width - 1, y2 = y1 + Height - 1;
-
-  LCD_WriteREG(Self->SetXCMD);
-  LCD_WriteDATA(x1 >> 8);
-  LCD_WriteDATA(x1 & 0XFF);
-  LCD_WriteDATA(x2 >> 8);
-  LCD_WriteDATA(x2 & 0XFF);
-
-  LCD_WriteREG(Self->SetYCMD);
-  LCD_WriteDATA(y1 >> 8);
-  LCD_WriteDATA(y1 & 0XFF);
-  LCD_WriteDATA(y2 >> 8);
-  LCD_WriteDATA(y2 & 0XFF);
+  HAL_GPIO_WritePin(Self->BLK_Port, Self->BLK_Pin, State);
 }
 
-void LCD_SetDisplayDirection(LCD_t *Self)
+void LCD_Init(LCD_t *Self)
 {
-  if (Self->Direction == LCD_Vertical)
+  osDelay(50);
+
+  LCD_WriteRST(Self, GPIO_PIN_SET);
+  osDelay(10);
+  LCD_WriteRST(Self, GPIO_PIN_RESET);
+  osDelay(50);
+  LCD_WriteRST(Self, GPIO_PIN_SET);
+  osDelay(200);
+
+  LCD_ReadID(Self);
+  LCD_ConfigReg(Self);
+
+  FSMC_Bank1E->BWTR[0] &= ~(0XF << 0);
+  FSMC_Bank1E->BWTR[0] &= ~(0XF << 8);
+  FSMC_Bank1E->BWTR[0] |= 3 << 0;
+
+  FSMC_Bank1E->BWTR[0] |= 2 << 8;
+
+  LCD_DisplayOff(Self);
+
+  LCD_SetFont(Self, Self->Font);
+  LCD_SetPenColor(Self, BLACK);
+  LCD_SetBackgroundColor(Self, WHITE);
+  LCD_SetRotation(Self, Self->Rotation);
+  LCD_Clear(Self);
+
+  LCD_DisplayOn(Self);
+}
+
+
+void LCD_DisplayOn(LCD_t *Self)
+{
+  LCD_WriteREG(0X29);
+  LCD_WriteBLK(Self, GPIO_PIN_SET);
+}
+
+void LCD_DisplayOff(LCD_t *Self)
+{
+  LCD_WriteREG(0X28);
+  LCD_WriteBLK(Self, GPIO_PIN_RESET);
+}
+
+void LCD_SetCursor(LCD_t *Self, uint16_t X, uint16_t Y)
+{
+  LCD_WriteREG(Self->SetXCMD);
+  LCD_WriteDATA(X >> 8);
+  LCD_WriteDATA(X & 0XFF);
+
+  LCD_WriteREG(Self->SetYCMD);
+  LCD_WriteDATA(Y >> 8);
+  LCD_WriteDATA(Y & 0XFF);
+}
+
+void LCD_SetWindow(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Width, uint16_t Height)
+{
+  uint16_t X2 = X + Width - 1, Y2 = Y + Height - 1;
+
+  LCD_WriteREG(Self->SetXCMD);
+  LCD_WriteDATA(X >> 8);
+  LCD_WriteDATA(X & 0XFF);
+  LCD_WriteDATA(X2 >> 8);
+  LCD_WriteDATA(X2 & 0XFF);
+
+  LCD_WriteREG(Self->SetYCMD);
+  LCD_WriteDATA(Y >> 8);
+  LCD_WriteDATA(Y & 0XFF);
+  LCD_WriteDATA(Y2 >> 8);
+  LCD_WriteDATA(Y2 & 0XFF);
+}
+
+void LCD_SetFont(LCD_t *Self, LCD_Font Font)
+{
+  Self->Font = Font;
+
+  switch (Self->Font)
+  {
+  case LCDFont6x12:
+    Self->FontWidth = 6;
+    Self->FontHight = 12;
+    break;
+  }
+}
+
+void LCD_SetRotation(LCD_t *Self, LCD_Rotation Rotation)
+{
+  Self->Rotation = Rotation;
+
+  switch (Self->Rotation)
+  {
+  case Rotation0:
+    LCD_SetDisplayDirection(Self, Display_Vertical);
+    LCD_SetScanDirection(Self, Scan_L2R_U2D);
+    break;
+
+  case Rotation90:
+    LCD_SetDisplayDirection(Self, Display_Horizontal);
+    LCD_SetScanDirection(Self, Scan_U2D_R2L);
+    break;
+
+  case Rotation180:
+    LCD_SetDisplayDirection(Self, Display_Vertical);
+    LCD_SetScanDirection(Self, Scan_R2L_D2U);
+    break;
+
+  case Rotation270:
+    LCD_SetDisplayDirection(Self, Display_Horizontal);
+    LCD_SetScanDirection(Self, Scan_D2U_L2R);
+    break;
+  }
+}
+
+void LCD_SetDisplayDirection(LCD_t *Self, LCD_DisplayDirection DisplayDirection)
+{
+  Self->DisplayDirection = DisplayDirection;
+
+  if (Self->DisplayDirection == Display_Vertical)
   {
     Self->Width = 320;
     Self->Height = 480;
-    Self->GRAMCMD = 0X2C;
-    Self->SetXCMD = 0X2A;
-    Self->SetYCMD = 0X2B;
-    Self->ScanDirection = Vertical_ScanDirection;
-  } else if (Self->Direction == LCD_Horizontal)
+  } else if (Self->DisplayDirection == Display_Horizontal)
   {
     Self->Width = 480;
     Self->Height = 320;
-    Self->GRAMCMD = 0X2C;
-    Self->SetXCMD = 0X2A;
-    Self->SetYCMD = 0X2B;
-    Self->ScanDirection = Horizontal_ScanDirection;
   }
+
+  Self->GRAMCMD = 0X2C;
+  Self->SetXCMD = 0X2A;
+  Self->SetYCMD = 0X2B;
 }
 
-void LCD_SetScanDirection(LCD_t *Self)
+uint16_t ScanRegValue[] = {
+    (0 << 7) | (0 << 6) | (0 << 5),
+    (1 << 7) | (0 << 6) | (0 << 5),
+    (0 << 7) | (1 << 6) | (0 << 5),
+    (1 << 7) | (1 << 6) | (0 << 5),
+    (0 << 7) | (0 << 6) | (1 << 5),
+    (0 << 7) | (1 << 6) | (1 << 5),
+    (1 << 7) | (0 << 6) | (1 << 5),
+    (1 << 7) | (1 << 6) | (1 << 5),
+};
+
+void LCD_SetScanDirection(LCD_t *Self, LCD_ScanDirection ScanDirection)
 {
-  uint16_t regval = 0;
-  switch (Self->ScanDirection)
-  {
-  case L2R_U2D:
-    regval |= (0 << 7) | (0 << 6) | (0 << 5);
-    break;
+  Self->ScanDirection = ScanDirection;
 
-  case L2R_D2U:
-    regval |= (1 << 7) | (0 << 6) | (0 << 5);
-    break;
-
-  case R2L_U2D:
-    regval |= (0 << 7) | (1 << 6) | (0 << 5);
-    break;
-
-  case R2L_D2U:
-    regval |= (1 << 7) | (1 << 6) | (0 << 5);
-    break;
-
-  case U2D_L2R:
-    regval |= (0 << 7) | (0 << 6) | (1 << 5);
-    break;
-
-  case U2D_R2L:
-    regval |= (0 << 7) | (1 << 6) | (1 << 5);
-    break;
-
-  case D2U_L2R:
-    regval |= (1 << 7) | (0 << 6) | (1 << 5);
-    break;
-
-  case D2U_R2L:
-    regval |= (1 << 7) | (1 << 6) | (1 << 5);
-    break;
-  }
+  uint16_t Value = 0;
+  Value |= ScanRegValue[Self->ScanDirection];
 
   LCD_WriteREG(0X36);
-  LCD_WriteDATA(regval);
-
-  uint16_t temp;
-  if (regval & 0X20)
-  {
-    if (Self->Width < Self->Height)
-    {
-      temp = Self->Width;
-      Self->Width = Self->Height;
-      Self->Height = temp;
-    }
-  } else
-  {
-    if (Self->Width > Self->Height)
-    {
-      temp = Self->Width;
-      Self->Width = Self->Height;
-      Self->Height = temp;
-    }
-  }
+  LCD_WriteDATA(Value);
 }
 
-void LCD_SetPointColor(LCD_t *Self, uint16_t Color)
+void LCD_SetPenColor(LCD_t *Self, uint16_t Color)
 {
-  Self->PointColor = Color;
+  Self->PenColor = Color;
 }
 
-void LCD_SetBackColor(LCD_t *Self, uint16_t Color) { Self->BackColor = Color; }
-
-void LCD_Clear(LCD_t *Self, uint16_t Color)
+void LCD_SetBackgroundColor(LCD_t *Self, uint16_t Color)
 {
-  LCD_SetWindow(Self, 0, 0, Self->Width, Self->Height);
+  Self->BackgroundColor = Color;
+}
 
+void LCD_Clear(LCD_t *Self)
+{
+  LCD_ClearArea(Self, 0, 0, Self->Width, Self->Height);
+}
+
+void LCD_ClearArea(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Width, uint16_t Height)
+{
+  uint16_t Color = Self->BackgroundColor;
+  uint32_t TotalPoint = Width * Height;
+
+  LCD_SetWindow(Self, X, Y, Width, Height);
   LCD_WriteGRAM(Self);
-  uint32_t totalPoint = Self->Width * Self->Height;
-  for (uint32_t index = 0; index < totalPoint; index++)
+  for (uint32_t i = 0; i < TotalPoint; i++)
   {
     LCD_WriteDATA(Color);
   }
 }
 
-void LCD_Fill(LCD_t *Self, uint16_t x, uint16_t y, uint16_t Width, uint16_t Height, uint16_t Color)
+void LCD_Fill(LCD_t *Self)
 {
-  LCD_SetWindow(Self, x, y, Width, Height);
+  LCD_FillArea(Self, 0, 0, Self->Width, Self->Height);
+}
 
+void LCD_FillArea(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Width, uint16_t Height)
+{
+  uint16_t Color = Self->PenColor;
+  uint32_t TotalPoint = Width * Height;
+
+  LCD_SetWindow(Self, X, Y, Width, Height);
   LCD_WriteGRAM(Self);
-  uint32_t totalPoint = Width * Height;
-  for (uint32_t i = 0; i < totalPoint; i++)
+  for (uint32_t i = 0; i < TotalPoint; i++)
   {
     LCD_WriteDATA(Color);
   }
 }
 
-uint16_t LCD_ReadPoint(LCD_t *Self, uint16_t x, uint16_t y)
+void LCD_Delay(uint8_t i)
 {
-  uint16_t r = 0, g = 0, b = 0;
-  if (x >= Self->Width || y >= Self->Height)
+  while (i--)
+  {
+  }
+}
+
+uint16_t LCD_ReadPoint(LCD_t *Self, uint16_t X, uint16_t Y)
+{
+  if (X < 0 || Y < 0 || X >= Self->Width || Y >= Self->Height)
+  {
     return 0;
-  LCD_SetCursor(Self, x, y);
+  }
 
+  uint16_t R = 0, G = 0, B = 0;
+
+  LCD_SetCursor(Self, X, Y);
   LCD_WriteREG(0X2E);
 
-  r = LCD_ReadDATA();
+  R = LCD_ReadDATA();
+  LCD_Delay(2);
 
-  uint8_t i = 2;
-  while (i--)
-    ;
-  r = LCD_ReadDATA();
+  R = LCD_ReadDATA();
+  LCD_Delay(2);
 
-  i = 2;
-  while (i--)
-    ;
-  b = LCD_ReadDATA();
-  g = r & 0XFF;
+  B = LCD_ReadDATA();
 
-  g <<= 8;
+  G = R & 0XFF;
+  G <<= 8;
 
-  return (((r >> 11) << 11) | ((g >> 10) << 5) | (b >> 11));
+  return (((R >> 11) << 11) | ((G >> 10) << 5) | (B >> 11));
 }
 
-void LCD_DrawPoint(LCD_t *Self, uint16_t x, uint16_t y, uint16_t Color)
+void LCD_DrawPoint(LCD_t *Self, uint16_t X, uint16_t Y)
 {
-  LCD_SetCursor(Self, x, y);
+  LCD_SetCursor(Self, X, Y);
+  LCD_WriteGRAM(Self);
+  LCD_WriteDATA(Self->PenColor);
+}
+
+void LCD_DrawPointWithColor(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Color)
+{
+  LCD_SetCursor(Self, X, Y);
   LCD_WriteGRAM(Self);
   LCD_WriteDATA(Color);
 }
 
-void LCD_DrawLine(LCD_t *Self, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
+void LCD_DrawHLine(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Width)
 {
-  int32_t xerr = 0, yerr = 0, delta_x = x2 - x1, delta_y = y2 - y1, distance;
-  int32_t incx, incy, uRow = x1, uCol = y1;
+  LCD_FillArea(Self, X, Y, Width, 1);
+}
+
+void LCD_DrawVLine(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Hight)
+{
+  LCD_FillArea(Self, X, Y, 1, Hight);
+}
+
+void LCD_DrawLine(LCD_t *Self, uint16_t X1, uint16_t Y1, uint16_t X2, uint16_t Y2)
+{
+  int32_t xerr = 0, yerr = 0, delta_x = X2 - X1, delta_y = Y2 - Y1, distance;
+  int32_t incx, incy, uRow = X1, uCol = Y1;
 
   if (delta_x > 0)
     incx = 1;
@@ -228,7 +316,7 @@ void LCD_DrawLine(LCD_t *Self, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y
 
   for (uint16_t t = 0; t <= distance + 1; t++)
   {
-    LCD_DrawPoint(Self, uRow, uCol, Self->PointColor);
+    LCD_DrawPoint(Self, uRow, uCol);
 
     xerr += delta_x;
     yerr += delta_y;
@@ -247,28 +335,28 @@ void LCD_DrawLine(LCD_t *Self, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y
   }
 }
 
-void LCD_DrawRectangle(LCD_t *Self, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
+void LCD_DrawRectangle(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Width, uint16_t Hight)
 {
-  LCD_DrawLine(Self, x1, y1, x2, y1);
-  LCD_DrawLine(Self, x1, y1, x1, y2);
-  LCD_DrawLine(Self, x1, y2, x2, y2);
-  LCD_DrawLine(Self, x2, y1, x2, y2);
+  LCD_DrawHLine(Self, X, Y, Width);
+  LCD_DrawHLine(Self, X, Y + Hight - 1, Width);
+  LCD_DrawVLine(Self, X, Y, Hight);
+  LCD_DrawVLine(Self, X + Width - 1, Y, Hight);
 }
 
-void LCD_DrawCircle(LCD_t *Self, uint16_t x0, uint16_t y0, uint8_t r)
+void LCD_DrawCircle(LCD_t *Self, uint16_t X, uint16_t Y, uint8_t Radius)
 {
-  int32_t a = 0, b = r, di = 3 - (r << 1);
+  int32_t a = 0, b = Radius, di = 3 - (Radius << 1);
 
   while (a <= b)
   {
-    LCD_DrawPoint(Self, x0 + a, y0 - b, Self->PointColor);
-    LCD_DrawPoint(Self, x0 + b, y0 - a, Self->PointColor);
-    LCD_DrawPoint(Self, x0 + b, y0 + a, Self->PointColor);
-    LCD_DrawPoint(Self, x0 + a, y0 + b, Self->PointColor);
-    LCD_DrawPoint(Self, x0 - a, y0 + b, Self->PointColor);
-    LCD_DrawPoint(Self, x0 - b, y0 + a, Self->PointColor);
-    LCD_DrawPoint(Self, x0 - a, y0 - b, Self->PointColor);
-    LCD_DrawPoint(Self, x0 - b, y0 - a, Self->PointColor);
+    LCD_DrawPoint(Self, X + a, Y - b);
+    LCD_DrawPoint(Self, X + b, Y - a);
+    LCD_DrawPoint(Self, X + b, Y + a);
+    LCD_DrawPoint(Self, X + a, Y + b);
+    LCD_DrawPoint(Self, X - a, Y + b);
+    LCD_DrawPoint(Self, X - b, Y + a);
+    LCD_DrawPoint(Self, X - a, Y - b);
+    LCD_DrawPoint(Self, X - b, Y - a);
     a++;
 
     if (di < 0)
@@ -282,155 +370,102 @@ void LCD_DrawCircle(LCD_t *Self, uint16_t x0, uint16_t y0, uint8_t r)
   }
 }
 
-void LCD_ShowImage(LCD_t *Self, uint16_t x, uint16_t y, uint16_t Width, uint16_t Height, const uint8_t *image)
+void LCD_ShowImage(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Width, uint16_t Height, const uint8_t *Image)
 {
-  LCD_SetWindow(Self, x, y, Width, Height);
+  LCD_SetWindow(Self, X, Y, Width, Height);
   LCD_WriteGRAM(Self);
 
   if (Self->hDMAx)
   {
-    uint32_t restPoint = Width * Height, alreadyPoint = 0;
+    uint32_t RestPoint = Width * Height, AlreadyPoint = 0;
     do
     {
-      uint32_t pointToShow = restPoint >= 65535 ? 65535 : restPoint;
+      uint32_t PointToShow = RestPoint >= 65535 ? 65535 : RestPoint;
 
-      HAL_DMA_Start(Self->hDMAx, (uint32_t) (image + alreadyPoint * 2), (uint32_t) &LCD1->LCD_RAM, pointToShow);
+      HAL_DMA_Start(Self->hDMAx, (uint32_t) (Image + AlreadyPoint * 2), (uint32_t) &LCD1->LCD_RAM, PointToShow);
       while (HAL_DMA_PollForTransfer(Self->hDMAx, HAL_DMA_FULL_TRANSFER, HAL_MAX_DELAY) != HAL_OK)
         ;
 
-      restPoint -= pointToShow;
-      alreadyPoint += pointToShow;
-    } while (restPoint);
+      RestPoint -= PointToShow;
+      AlreadyPoint += PointToShow;
+    } while (RestPoint);
 
   } else
   {
-    uint32_t totalPoint = Width * Height;
-    for (uint32_t i = 0; i < totalPoint; i++)
+    uint32_t TotalPoint = Width * Height;
+    for (uint32_t i = 0; i < TotalPoint; i++)
     {
-      LCD_WriteDATA((image[2 * i + 1] << 8) | image[2 * i]);
+      LCD_WriteDATA((Image[2 * i + 1] << 8) | Image[2 * i]);
     }
   }
 }
 
-void LCD_ShowChar(LCD_t *Self, uint16_t x, uint16_t y, uint8_t num, uint8_t Size, uint8_t mode)
+#define LCD_ShowCharWithFont(Self, X, Y, Char, Font)                  \
+  do                                                                  \
+  {                                                                   \
+    uint8_t Index = Char - ' ';                                       \
+    uint8_t *Bitmap = (uint8_t *) Font[Index];                        \
+    uint8_t BytesPerColumn = (Self->FontHight + 7) / 8;               \
+    for (uint16_t j = Y; j < Y + Self->FontHight; j++)                \
+    {                                                                 \
+      uint8_t BytesNowColumn = (j - Y) / 8;                           \
+      uint8_t Mask = 1 << (7 - ((j - Y) % 8));                        \
+      for (uint16_t i = X; i < X + Self->FontWidth; i++)              \
+      {                                                               \
+        if (Bitmap[(i - X) * BytesPerColumn + BytesNowColumn] & Mask) \
+        {                                                             \
+          LCD_DrawPoint(Self, i, j);                                  \
+        }                                                             \
+      }                                                               \
+    }                                                                 \
+  } while (0)
+
+void LCD_ShowChar(LCD_t *Self, uint16_t X, uint16_t Y, uint8_t Char)
 {
-  uint16_t y0 = y;
-  num = num - ' ';
-
-  uint8_t csize = (Size / 8 + ((Size % 8) ? 1 : 0)) * (Size / 2);
-  for (uint8_t t = 0; t < csize; t++)
+  switch (Self->Font)
   {
-    uint8_t temp;
-    if (Size == 12)
-    {
-      temp = asc2_1206[num][t];
-    } else
-    {
-      return;
-    }
-
-    for (uint8_t t1 = 0; t1 < 8; t1++)
-    {
-      if (temp & 0x80)
-      {
-        LCD_DrawPoint(Self, x, y, Self->PointColor);
-      } else if (mode == 0)
-      {
-        LCD_DrawPoint(Self, x, y, Self->BackColor);
-      }
-
-      temp <<= 1;
-      y++;
-
-      if (y >= Self->Height)
-      {
-        return;
-      }
-
-      if ((y - y0) == Size)
-      {
-        y = y0;
-        x++;
-
-        if (x >= Self->Width)
-        {
-          return;
-        }
-
-        break;
-      }
-    }
+  case LCDFont6x12:
+    LCD_ShowCharWithFont(Self, X, Y, Char, LCDFont6x12Bitmap);
+    break;
   }
 }
 
 
-void LCD_ShowString(LCD_t *Self, uint16_t x, uint16_t y, uint16_t Width, uint16_t Height, uint8_t Size, char *string)
+void LCD_ShowString(LCD_t *Self, uint16_t X, uint16_t Y, char *String)
 {
-  uint8_t x0 = x;
-  Width += x;
-  Height += y;
-
-  while ((*string <= '~') && (*string >= ' '))
+  for (uint16_t i = 0; String[i]; i++)
   {
-    if (x >= Width)
-    {
-      x = x0;
-      y += Size;
-    }
+    LCD_ShowChar(Self, X, Y, String[i]);
 
-    if (y >= Height)
-    {
-      break;
-    }
-
-    LCD_ShowChar(Self, x, y, *string, Size, 0);
-    x += Size / 2;
-    string++;
+    X += Self->FontWidth;
   }
 }
 
-void LCD_Printf(LCD_t *Self, uint16_t x, uint16_t y, uint16_t Width, uint16_t Height, uint8_t Size, char *Format, ...)
+void LCD_Printf(LCD_t *Self, uint16_t X, uint16_t Y, char *Format, ...)
 {
   va_list Args;
   va_start(Args, Format);
-  vsprintf((char *) Self->PrintfBuffer, Format, Args);
+  int32_t Length = vsnprintf((char *) Self->PrintfBuffer, sizeof(Self->PrintfBuffer), Format, Args);
   va_end(Args);
 
-  LCD_ShowString(Self, x, y, Width, Height, Size, (char *) Self->PrintfBuffer);
+  if (Length > 0)
+  {
+    LCD_ShowString(Self, X, Y, (char *) Self->PrintfBuffer);
+  }
 }
 
-void LCD_Init(LCD_t *Self)
+void LCD_ReadID(LCD_t *Self)
 {
-  osDelay(50);
-
-  LCD_RST_SET();
-  osDelay(10);
-  LCD_RST_RESET();
-  osDelay(50);
-  LCD_RST_SET();
-  osDelay(200);
-
-  LCD_WriteREG(0XD3);
-  Self->ID = LCD_ReadDATA();
-  Self->ID = LCD_ReadDATA();
-  Self->ID = LCD_ReadDATA();
-  Self->ID <<= 8;
-  Self->ID |= LCD_ReadDATA();
-
-  LCD_WriteREG(0X04);
-  Self->ID = LCD_ReadDATA();
-  Self->ID = LCD_ReadDATA();
-  Self->ID = LCD_ReadDATA();
-  Self->ID <<= 8;
-  Self->ID |= LCD_ReadDATA() & 0XFF;
-
   LCD_WriteREG(0XD4);
   Self->ID = LCD_ReadDATA();
   Self->ID = LCD_ReadDATA();
   Self->ID = LCD_ReadDATA();
   Self->ID <<= 8;
   Self->ID |= LCD_ReadDATA();
+}
 
+void LCD_ConfigReg(LCD_t *Self)
+{
   LCD_WriteREG(0xED);
   LCD_WriteDATA(0x01);
   LCD_WriteDATA(0xFE);
@@ -1107,18 +1142,4 @@ void LCD_Init(LCD_t *Self)
   LCD_WriteREG(0x55);
   LCD_WriteDATA(0x82);
   LCD_WriteREG(0x2c);
-
-  FSMC_Bank1E->BWTR[0] &= ~(0XF << 0);
-  FSMC_Bank1E->BWTR[0] &= ~(0XF << 8);
-  FSMC_Bank1E->BWTR[0] |= 3 << 0;
-
-  FSMC_Bank1E->BWTR[0] |= 2 << 8;
-
-  LCD_SetDisplayDirection(Self);
-  LCD_SetScanDirection(Self);
-  LCD_Clear(Self, WHITE);
-  LCD_SetBackColor(Self, WHITE);
-  LCD_SetPointColor(Self, BLACK);
-
-  LCD_BLK_SET();
 }

@@ -3,7 +3,7 @@
 
 #include "stm32f4xx_hal.h"
 
-#include "gpio.h"
+#include "LCD_Font.h"
 
 #define WHITE 0xFFFF
 #define BLACK 0x0000
@@ -27,35 +27,6 @@
 #define LGRAYBLUE 0XA651
 #define LBBLUE 0X2B12
 
-#define LCD_LED PDout(12)
-#define LCD_RST PDout(11)
-
-#define LCD_RST_SET() HAL_GPIO_WritePin(LCD_RST_GPIO_Port, LCD_RST_Pin, GPIO_PIN_SET)
-#define LCD_RST_RESET() HAL_GPIO_WritePin(LCD_RST_GPIO_Port, LCD_RST_Pin, GPIO_PIN_RESET)
-#define LCD_BLK_SET() HAL_GPIO_WritePin(LCD_BLK_GPIO_Port, LCD_BLK_Pin, GPIO_PIN_SET)
-#define LCD_BLK_RESET() HAL_GPIO_WritePin(LCD_BLK_GPIO_Port, LCD_BLK_Pin, GPIO_PIN_RESET)
-
-typedef enum
-{
-  L2R_U2D = 0,
-  L2R_D2U = 1,
-  R2L_U2D = 2,
-  R2L_D2U = 3,
-  U2D_L2R = 4,
-  U2D_R2L = 5,
-  D2U_L2R = 6,
-  D2U_R2L = 7,
-} LCDScanDirection_t;
-
-#define Vertical_ScanDirection L2R_U2D
-#define Horizontal_ScanDirection U2D_R2L
-
-typedef enum
-{
-  LCD_Vertical = 0,
-  LCD_Horizontal = 1,
-} LCDDirection_t;
-
 #define LCD_BASE ((uint32_t) (0x60000000 + (0x4000000 * (1 - 1))) | (((1 << 18) * 2) - 2))
 #define LCD1 ((LCD_TypeDef *) LCD_BASE)
 
@@ -65,51 +36,95 @@ typedef struct
   volatile uint16_t LCD_RAM;
 } LCD_TypeDef;
 
+typedef enum
+{
+  Display_Vertical,
+  Display_Horizontal,
+} LCD_DisplayDirection;
+
+typedef enum
+{
+  Scan_L2R_U2D,
+  Scan_L2R_D2U,
+  Scan_R2L_U2D,
+  Scan_R2L_D2U,
+  Scan_U2D_L2R,
+  Scan_U2D_R2L,
+  Scan_D2U_L2R,
+  Scan_D2U_R2L,
+} LCD_ScanDirection;
+
+typedef enum
+{
+  Rotation0,
+  Rotation90,
+  Rotation180,
+  Rotation270,
+} LCD_Rotation;
+
 typedef struct
 {
-  LCDDirection_t Direction;
-  LCDScanDirection_t ScanDirection;
+  GPIO_TypeDef *RST_Port;
+  uint32_t RST_Pin;
+  GPIO_TypeDef *BLK_Port;
+  uint32_t BLK_Pin;
 
   DMA_HandleTypeDef *hDMAx;
 
-  uint16_t PointColor;
-  uint16_t BackColor;
+  LCD_Rotation Rotation;
+  LCD_DisplayDirection DisplayDirection;
+  LCD_ScanDirection ScanDirection;
 
   uint16_t ID;
   uint16_t Width;
   uint16_t Height;
 
+  LCD_Font Font;
+  uint8_t FontWidth;
+  uint8_t FontHight;
+
   uint16_t SetXCMD;
   uint16_t SetYCMD;
   uint16_t GRAMCMD;
 
+  uint16_t PenColor;
+  uint16_t BackgroundColor;
+
   uint8_t PrintfBuffer[128];
 } LCD_t;
 
-void LCD_Init(LCD_t *self);
-void LCD_DisplayOn(void);
-void LCD_DisplayOff(void);
+void LCD_Init(LCD_t *Self);
+void LCD_DisplayOn(LCD_t *Self);
+void LCD_DisplayOff(LCD_t *Self);
 
-void LCD_SetCursor(LCD_t *self, uint16_t x, uint16_t y);
-void LCD_SetWindow(LCD_t *self, uint16_t x, uint16_t y, uint16_t width, uint16_t height);
-void LCD_SetScanDirection(LCD_t *self);
-void LCD_SetDisplayDirection(LCD_t *self);
-void LCD_SetPointColor(LCD_t *self, uint16_t color);
-void LCD_SetBackColor(LCD_t *self, uint16_t color);
+void LCD_SetFont(LCD_t *Self, LCD_Font Font);
+void LCD_SetRotation(LCD_t *Self, LCD_Rotation Rotation);
+void LCD_SetDisplayDirection(LCD_t *Self, LCD_DisplayDirection DisplayDirection);
+void LCD_SetScanDirection(LCD_t *Self, LCD_ScanDirection ScanDirection);
+void LCD_SetPenColor(LCD_t *Self, uint16_t Color);
+void LCD_SetBackgroundColor(LCD_t *Self, uint16_t Color);
 
-void LCD_Clear(LCD_t *self, uint16_t Color);
-void LCD_Fill(LCD_t *self, uint16_t sx, uint16_t sy, uint16_t ex, uint16_t ey, uint16_t color);
+void LCD_SetCursor(LCD_t *Self, uint16_t X, uint16_t Y);
+void LCD_SetWindow(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Width, uint16_t Height);
 
-uint16_t LCD_ReadPoint(LCD_t *self, uint16_t x, uint16_t y);
-void LCD_DrawPoint(LCD_t *self, uint16_t x, uint16_t y, uint16_t color);
-void LCD_DrawLine(LCD_t *self, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
-void LCD_DrawRectangle(LCD_t *self, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
-void LCD_DrawCircle(LCD_t *self, uint16_t x0, uint16_t y0, uint8_t r);
+void LCD_Clear(LCD_t *Self);
+void LCD_Fill(LCD_t *Self);
+void LCD_ClearArea(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Width, uint16_t Height);
+void LCD_FillArea(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Width, uint16_t Height);
 
-void LCD_ShowImage(LCD_t *self, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *image);
+uint16_t LCD_ReadPoint(LCD_t *Self, uint16_t X, uint16_t Y);
+void LCD_DrawPoint(LCD_t *Self, uint16_t X, uint16_t Y);
+void LCD_DrawPointWithColor(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Color);
+void LCD_DrawHLine(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Width);
+void LCD_DrawVLine(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Hight);
+void LCD_DrawLine(LCD_t *Self, uint16_t X1, uint16_t Y1, uint16_t X2, uint16_t Y2);
+void LCD_DrawRectangle(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Width, uint16_t Hight);
+void LCD_DrawCircle(LCD_t *Self, uint16_t X, uint16_t Y, uint8_t Radius);
 
-void LCD_ShowChar(LCD_t *self, uint16_t x, uint16_t y, uint8_t num, uint8_t size, uint8_t mode);
-void LCD_ShowString(LCD_t *self, uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t size, char *p);
-void LCD_Printf(LCD_t *self, uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t size, char *format, ...);
+void LCD_ShowImage(LCD_t *Self, uint16_t X, uint16_t Y, uint16_t Width, uint16_t Height, const uint8_t *Image);
+
+void LCD_ShowChar(LCD_t *Self, uint16_t X, uint16_t Y, uint8_t Char);
+void LCD_ShowString(LCD_t *Self, uint16_t X, uint16_t Y, char *String);
+void LCD_Printf(LCD_t *Self, uint16_t X, uint16_t Y, char *Format, ...);
 
 #endif
