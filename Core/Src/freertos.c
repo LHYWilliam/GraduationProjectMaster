@@ -29,6 +29,8 @@
 #include "dma.h"
 #include "gpio.h"
 
+#include "lvgl.h"
+
 #include "LCD.h"
 
 /* USER CODE END Includes */
@@ -40,6 +42,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+void flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map);
 
 /* USER CODE END PD */
 
@@ -57,16 +61,16 @@ LCD_t LCD = {
     .BLK_Port = LCD_BLK_GPIO_Port,
     .BLK_Pin = LCD_BLK_Pin,
     .hDMAx = &hdma_memtomem_dma2_stream0,
-    .Rotation = Rotation90,
+    .Rotation = Rotation0,
 };
 
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
-    .name = "defaultTask",
-    .stack_size = 128 * 4,
-    .priority = (osPriority_t) osPriorityNormal,
+  .name = "defaultTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -83,8 +87,7 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   * @param  None
   * @retval None
   */
-void MX_FREERTOS_Init(void)
-{
+void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
@@ -116,6 +119,7 @@ void MX_FREERTOS_Init(void)
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
+
 }
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -132,22 +136,26 @@ void StartDefaultTask(void *argument)
   LCD_Init(&LCD);
   LCD_Clear(&LCD);
 
-  extern const uint8_t LCDFont6x12Bitmap[95][12];
-  LCD_ShowImage(&LCD, 128, 128, 64, 64, &LCDFont6x12Bitmap[0][0]);
+  lv_init();
 
-  LCD_Printf(&LCD, 64, 64, "Hello");
-  LCD_FillArea(&LCD, 16, 16, 32, 32);
-  LCD_DrawLine(&LCD, 0, 0, 32, 32);
-  LCD_DrawVLine(&LCD, 32, 64, 128);
-  LCD_DrawHLine(&LCD, 16, 128, 32);
-  LCD_DrawRectangle(&LCD, 32, 128, 3, 3);
-  LCD_DrawCircle(&LCD, 48, 48, 16);
+  lv_tick_set_cb(osKernelGetTickCount);
 
+  lv_display_t *display = lv_display_create(LCD.Width, LCD.Height);
 
+  static uint8_t buf1[480 * 320 / 10];
+  static uint8_t buf2[480 * 320 / 10];
+  lv_display_set_buffers(display, buf1, buf2, sizeof(buf1), LV_DISPLAY_RENDER_MODE_PARTIAL);
+
+  lv_display_set_flush_cb(display, flush_cb);
+
+  lv_obj_t *label = lv_label_create(lv_screen_active());
+  lv_label_set_text(label, "Hello world");
+  lv_obj_center(label);
 
   /* Infinite loop */
   for (;;)
   {
+    lv_timer_handler();
     osDelay(1);
   }
   /* USER CODE END StartDefaultTask */
@@ -156,4 +164,13 @@ void StartDefaultTask(void *argument)
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
 
+void flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
+{
+  /*Write px_map to the area->x1, area->x2, area->y1, area->y2 area of the
+     *frame buffer or external display controller. */
+  LCD_ShowImage(&LCD, area->x1, area->y1, area->x2 - area->x1 + 1, area->y2 - area->y1 + 1, px_map);
+  lv_display_flush_ready(disp);
+}
+
 /* USER CODE END Application */
+

@@ -46,7 +46,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${CMAKE_SOURCE_DIR}/Hardware/Src/LCD.c
-        ${CMAKE_SOURCE_DIR}/Hardware/Src/LCD_Font.c
+    ${CMAKE_SOURCE_DIR}/Hardware/Src/LCD_Font.c
 )
 
 # Add include paths
@@ -68,4 +68,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
 
     # Add user defined libraries
+    lvgl
 )
+
+add_subdirectory(Middlewares/Third_Party/lvgl)
