@@ -31,22 +31,6 @@ static const uint16_t GT1151_TPX_TBL[5] = {
     GT1151_TP5_REG,
 };
 
-#define GT1151_SDA_IN()               \
-  {                                   \
-    GPIOB->MODER &= ~(3 << (2 * 12)); \
-    GPIOB->MODER |= 0 << 2 * 12;      \
-  }
-#define GT1151_SDA_OUT()              \
-  {                                   \
-    GPIOB->MODER &= ~(3 << (2 * 12)); \
-    GPIOB->MODER |= 1 << 2 * 12;      \
-  }
-
-#define GT1151_IIC_SCL PBout(15)
-#define GT1151_IIC_SDA PBout(12)
-#define GT1151_READ_SDA PBin(12)
-#define GT1151_RST PBout(14)
-
 typedef struct Touch
 {
   GPIOxPiny_t SCL;

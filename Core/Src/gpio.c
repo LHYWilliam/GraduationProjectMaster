@@ -76,12 +76,12 @@ void MX_GPIO_Init(void)
 /* USER CODE BEGIN 2 */
 uint32_t GPIO_IDR(const GPIOxPiny_t Pin)
 {
-  return BITBAND((uint32_t) GPIOx(Pin) + 0x10, GPIO_Pin_Num(Pin));
+  return BITBAND(((uint32_t) GPIOx(Pin) + 0x10), GPIO_Pin_Num(Pin));
 }
 
 uint32_t GPIO_ODR(const GPIOxPiny_t Pin)
 {
-  return BITBAND((uint32_t) GPIOx(Pin) + 0x14, GPIO_Pin_Num(Pin));
+  return BITBAND(((uint32_t) GPIOx(Pin) + 0x14), GPIO_Pin_Num(Pin));
 }
 
 void Time_Delayus(uint32_t us)
