@@ -56,9 +56,9 @@
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+    .name = "defaultTask",
+    .stack_size = 512 * 4,
+    .priority = (osPriority_t) osPriorityNormal,
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -75,7 +75,8 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   * @param  None
   * @retval None
   */
-void MX_FREERTOS_Init(void) {
+void MX_FREERTOS_Init(void)
+{
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
@@ -107,7 +108,6 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
-
 }
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -123,11 +123,14 @@ void StartDefaultTask(void *argument)
 
   LCD_Init(&LCD);
   LCD_Clear(&LCD);
+  LCD_Printf(&LCD, 0, 0, "Hello LCD");
 
-  lv_init();
-  lv_port_disp_init();
+  Touch_Init(&Touch);
 
-  lv_demo_widgets();
+  // lv_init();
+  // lv_port_disp_init();
+
+  // lv_demo_widgets();
 
   // static lv_style_t style;
   // lv_style_init(&style);
@@ -154,7 +157,12 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for (;;)
   {
-    lv_timer_handler();
+    // lv_timer_handler();
+    if (Touch_ScanChannel(&Touch, &LCD, 0))
+    {
+      LCD_DrawPoint(&LCD, Touch.X[0], Touch.Y[0]);
+    }
+
     osDelay(1);
   }
   /* USER CODE END StartDefaultTask */
@@ -164,4 +172,3 @@ void StartDefaultTask(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-

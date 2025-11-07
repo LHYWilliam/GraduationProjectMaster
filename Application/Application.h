@@ -8,7 +8,9 @@
 #include "fsmc.h"
 
 #include "LCD.h"
+#include "Touch.h"
 
 extern LCD_t LCD;
+extern Touch_t Touch;
 
 #endif

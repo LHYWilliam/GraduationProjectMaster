@@ -8,3 +8,10 @@ LCD_t LCD = {
     .hDMAx = &hdma_memtomem_dma2_stream0,
     .Rotation = Rotation0,
 };
+
+Touch_t Touch = {
+    .SCL = PB15,
+    .SDA = PB12,
+    .RST = PB14,
+    .Rotation = Rotation0,
+};

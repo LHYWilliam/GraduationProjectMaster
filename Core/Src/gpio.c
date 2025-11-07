@@ -47,21 +47,66 @@ void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOE_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, LCD_RST_Pin|LCD_BLK_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, TP_SDA_Pin | TP_RST_Pin | TP_SCL_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOD, LCD_RST_Pin | LCD_BLK_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : TP_SDA_Pin TP_RST_Pin TP_SCL_Pin */
+  GPIO_InitStruct.Pin = TP_SDA_Pin | TP_RST_Pin | TP_SCL_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LCD_RST_Pin LCD_BLK_Pin */
-  GPIO_InitStruct.Pin = LCD_RST_Pin|LCD_BLK_Pin;
+  GPIO_InitStruct.Pin = LCD_RST_Pin | LCD_BLK_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-
 }
 
+
 /* USER CODE BEGIN 2 */
+uint32_t GPIO_IDR(const GPIOxPiny_t Pin)
+{
+  return BITBAND((uint32_t) GPIOx(Pin) + 0x10, GPIO_Pin_Num(Pin));
+}
+
+uint32_t GPIO_ODR(const GPIOxPiny_t Pin)
+{
+  return BITBAND((uint32_t) GPIOx(Pin) + 0x14, GPIO_Pin_Num(Pin));
+}
+
+void Time_Delayus(uint32_t us)
+{
+  uint32_t now, last, reload, total, goal;
+  total = 0;
+  goal = us * 168;
+  last = SysTick->VAL;
+  reload = SysTick->LOAD;
+
+  for (;;)
+  {
+    now = SysTick->VAL;
+    if (now != last)
+    {
+      total += now < last ? last - now : reload - now + last;
+
+      if (total >= goal)
+      {
+        break;
+      }
+
+      last = now;
+    }
+  }
+}
 
 /* USER CODE END 2 */

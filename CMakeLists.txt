@@ -48,8 +48,9 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Application/Application.c
     ${CMAKE_SOURCE_DIR}/Application/LVGL/lv_port_disp.c
 
-    ${CMAKE_SOURCE_DIR}/Hardware/Src/LCD.c
     ${CMAKE_SOURCE_DIR}/Hardware/Src/LCD_Font.c
+    ${CMAKE_SOURCE_DIR}/Hardware/Src/LCD.c
+    ${CMAKE_SOURCE_DIR}/Hardware/Src/Touch.c
 
     ${CMAKE_SOURCE_DIR}/Middlewares/Third_Party/lvgl/demos/widgets/lv_demo_widgets.c
     ${CMAKE_SOURCE_DIR}/Middlewares/Third_Party/lvgl/demos/widgets/assets/img_clothes.c
