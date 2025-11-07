@@ -10,8 +10,11 @@ LCD_t LCD = {
 };
 
 Touch_t Touch = {
-    .SCL = PB15,
-    .SDA = PB12,
+    .I2C = {
+        .SCL = PB15,
+        .SDA = PB12,
+        .Timeout = 0x0F,
+    },
     .RST = PB14,
     .Rotation = Rotation0,
 };

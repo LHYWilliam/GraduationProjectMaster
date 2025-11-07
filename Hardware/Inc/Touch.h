@@ -6,6 +6,7 @@
 #include "gpio.h"
 
 #include "LCD.h"
+#include "I2C.h"
 
 #define GT1151_CMD_WR 0X28
 #define GT1151_CMD_RD 0X29
@@ -33,12 +34,8 @@ static const uint16_t GT1151_TPX_TBL[5] = {
 
 typedef struct Touch
 {
-  GPIOxPiny_t SCL;
-  GPIOxPiny_t SDA;
+  I2C_t I2C;
   GPIOxPiny_t RST;
-  uint32_t SCL_ODR;
-  uint32_t SDA_IDR;
-  uint32_t SDA_ODR;
   uint32_t RST_ODR;
 
   LCD_Rotation Rotation;

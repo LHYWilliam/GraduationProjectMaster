@@ -1,7 +1,6 @@
 #include "Touch.h"
 #include "Touch_I2C.h"
 
-
 void Touch_Init(Touch_t *Self)
 {
   Touch_I2C_Init(Self);

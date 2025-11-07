@@ -58,6 +58,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Middlewares/Third_Party/lvgl/demos/widgets/assets/img_clothes.c
     ${CMAKE_SOURCE_DIR}/Middlewares/Third_Party/lvgl/demos/widgets/assets/img_demo_widgets_avatar.c
     ${CMAKE_SOURCE_DIR}/Middlewares/Third_Party/lvgl/demos/widgets/assets/img_lvgl_logo.c
+
+    ${CMAKE_SOURCE_DIR}/Util/Src/I2C.c
 )
 
 # Add include paths
@@ -67,6 +69,8 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Application/LVGL
 
     ${CMAKE_SOURCE_DIR}/Hardware/Inc
+
+    ${CMAKE_SOURCE_DIR}/Util/Inc
 )
 
 # Add project symbols (macros)
