@@ -1,0 +1,26 @@
+[
+  {
+    "label": "Build",
+    "command": "source ~/Code/Embedded/CubeIDEEnv.sh; cube-cmake --preset Debug; cube-cmake --build /home/william/Code/Embedded/GraduationProjectMaster/build/Debug --",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "reveal_target": "dock",
+    "hide": "never",
+    "shell": "system",
+    "show_summary": true,
+    "show_command": true
+  },
+  {
+    "label": "Flash",
+    "command": "probe-rs run --chip STM32F407VE ./build/Debug/GraduationProjectMaster.elf --preverify --verify",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "reveal_target": "dock",
+    "hide": "never",
+    "shell": "system",
+    "show_summary": true,
+    "show_command": true
+  }
+]

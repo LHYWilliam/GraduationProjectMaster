@@ -188,7 +188,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
   if (htim->Instance == TIM14)
   {
-    // lv_tick_inc(1);
+    lv_tick_inc(1);
   }
 
   /* USER CODE END Callback 1 */

@@ -28,6 +28,7 @@
 
 #include "lvgl.h"
 #include "lv_port_disp.h"
+#include "lv_port_indev.h"
 #include "demos/widgets/lv_demo_widgets.h"
 
 #include "Application.h"
@@ -129,6 +130,7 @@ void StartDefaultTask(void *argument)
 
   // lv_init();
   // lv_port_disp_init();
+  // lv_port_indev_init();
 
   // lv_demo_widgets();
 
@@ -158,6 +160,7 @@ void StartDefaultTask(void *argument)
   for (;;)
   {
     // lv_timer_handler();
+
     if (Touch_ScanChannel(&Touch, &LCD, 0))
     {
       LCD_DrawPoint(&LCD, Touch.X[0], Touch.Y[0]);

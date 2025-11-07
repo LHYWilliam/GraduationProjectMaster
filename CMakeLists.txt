@@ -47,6 +47,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${CMAKE_SOURCE_DIR}/Application/Application.c
     ${CMAKE_SOURCE_DIR}/Application/LVGL/lv_port_disp.c
+        ${CMAKE_SOURCE_DIR}/Application/LVGL/lv_port_indev.c
 
     ${CMAKE_SOURCE_DIR}/Hardware/Src/LCD_Font.c
     ${CMAKE_SOURCE_DIR}/Hardware/Src/LCD.c
