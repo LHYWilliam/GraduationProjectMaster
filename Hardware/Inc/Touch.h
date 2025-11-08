@@ -46,7 +46,7 @@ typedef struct Touch
 } Touch_t;
 
 void Touch_Init(Touch_t *Self);
-uint8_t Touch_Scan(Touch_t *Self, LCD_t *lcd);
-uint8_t Touch_ScanChannel(Touch_t *Self, LCD_t *lcd, uint8_t channel);
+uint8_t Touch_Scan(Touch_t *Self, LCD_t *LCD);
+uint8_t Touch_ScanChannel(Touch_t *Self, LCD_t *LCD, uint8_t Channel);
 
 #endif

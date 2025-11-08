@@ -41,23 +41,20 @@ void I2C_Stop(I2C_t *Self)
   I2C_Delay(Self);
   GPIO_Write(Self->SDA_ODR, 1);
   I2C_Delay(Self);
-
-  GPIO_InputMode(Self->SDA);
 }
 
 void I2C_Tick(I2C_t *Self)
 {
-  GPIO_Write(Self->SCL_ODR, 0);
-
-  I2C_Delay(Self);
   GPIO_Write(Self->SCL_ODR, 1);
   I2C_Delay(Self);
   GPIO_Write(Self->SCL_ODR, 0);
-  I2C_Delay(Self);
 }
 
 void I2C_Ack(I2C_t *Self, I2CAck_t Ack)
 {
+  GPIO_Write(Self->SCL_ODR, 0);
+  I2C_Delay(Self);
+
   GPIO_OutputMode(Self->SDA);
 
   GPIO_Write(Self->SDA_ODR, Ack);
@@ -95,15 +92,10 @@ uint8_t I2C_ReadByte(I2C_t *Self, I2CAck_t Ack)
   {
     GPIO_Write(Self->SCL_ODR, 0);
     I2C_Delay(Self);
-
     GPIO_Write(Self->SCL_ODR, 1);
-    I2C_Delay(Self);
 
     Byte = Byte << 1 | GPIO_ReadInput(Self->SDA_IDR);
   }
-
-  GPIO_Write(Self->SCL_ODR, 0);
-  I2C_Delay(Self);
 
   I2C_Ack(Self, Ack);
 
@@ -147,7 +139,7 @@ I2CAck_t I2C_NowAddrRead(I2C_t *Self, uint8_t DevAddr, uint8_t *Bytes, uint8_t L
 
   I2C_Stop(Self);
 
-  return 0;
+  return I2CAck;
 }
 
 I2CAck_t I2C_NowAddrWrite(I2C_t *Self, uint8_t DevAddr, const uint8_t *Bytes, uint8_t Length)
@@ -163,7 +155,7 @@ I2CAck_t I2C_NowAddrWrite(I2C_t *Self, uint8_t DevAddr, const uint8_t *Bytes, ui
 
   I2C_Stop(Self);
 
-  return 0;
+  return I2CAck;
 }
 
 I2CAck_t I2C_SignedAddrRead(I2C_t *Self, uint8_t DevAddr, uint8_t MemAddr, uint8_t *Bytes, uint8_t Length)

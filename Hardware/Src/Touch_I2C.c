@@ -25,8 +25,10 @@ uint8_t Touch_I2C_Init(Touch_t *Self)
 
     Temp[0] = 0X00;
     Touch_I2C_WriteBytes(Self, GT1151_CTRL_REG, Temp, 1);
+
     return 0;
   }
+
   return 1;
 }
 
